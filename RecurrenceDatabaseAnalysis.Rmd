@@ -5,7 +5,7 @@ date: "Wednesday, April 06, 2016"
 output: html_document
 ---
 ```{r readData, echo=FALSE}
-setwd("C:/Users/tjs/Google Drive/Breast Center/Recurrence")
+setwd("C:\Users\tsanders2\Documents")
 data<-read.csv("20160402 data.csv", header = TRUE) 
 ```
 ##Summary of Recurrence Data##  
