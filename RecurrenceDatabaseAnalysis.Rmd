@@ -1,0 +1,297 @@
+---
+title: "Recurrence Data Analysis"
+author: "Tom Sanders"
+date: "Wednesday, April 06, 2016"
+output: html_document
+---
+```{r readData, echo=FALSE}
+setwd("C:/Users/tjs/Google Drive/Breast Center/Recurrence")
+data<-read.csv("20160402 data.csv", header = TRUE) 
+```
+##Summary of Recurrence Data##  
+All patients in the Recurrence Database have satisfy the following:  
+    
+1. Female with a breast cancer  
+    a. First occurrence after 1999  
+    b. Not soley DCIS  
+    c. Not metastitic  
+    d. Recurrence not contralateral  
+     
+2. Known first occurrance values of
+    a. ER  
+    b. PR  
+    c. Number of positive lympth nodes  
+    d. Histological Grade  
+    e. Tumor size  
+
+```{r summaryData}
+summary(data)
+```
+###First 6 rows of Recurrence Data###  
+```{r 6rowsData, echo=FALSE}
+head(data)
+```
+###Number of Patients: ###
+```{r NumbPatients, echo=FALSE}
+nrow(data)
+```
+
+
+###Number of Positive Nodes:###   
+
+```{r numbPosNode, echo=FALSE}
+# Survival Analysis--Positive Nodes
+library(survival)
+# 0 positive nodes
+data0<-data[data$PosNodesSurg==0,]
+#attach(data0)
+library(survival)
+data0.surv <- survfit(Surv(data0$RecurrTime_years)~ 1, conf.type="none")
+surv0<-summary(data0.surv)
+#detach()
+# 1-3 positive nodes
+data3<-data[data$PosNodesSurg>0 & data$PosNodesSurg<=3,]
+#attach(data3)
+data3.surv <- survfit(Surv(data3$RecurrTime_years)~ 1, conf.type="none")
+surv3<-summary(data3.surv)
+#detach()
+# 3+ positive nodes
+data4<-data[data$PosNodesSurg>3,]
+#attach(data4)
+data4.surv <- survfit(Surv(data4$RecurrTime_years)~ 1, conf.type="none")
+surv4<-summary(data4.surv)
+#detach()
+# overlay 3 survival plots
+plot(surv0$surv~surv0$time, xlim=c(0,10),xlab="Time (years)", ylab="Survival Probability",lty=1,type="s",main="#Positive Nodes Survival Functions")
+lines(surv3$surv~surv3$time,type="s",pch=3,lty=3)
+lines(surv4$surv~surv4$time,type="s",pch=4,lty=4)
+legend(6, .9, c("0", "1-3", "3+"), lty=(c(1,3,4)))
+# create a categorical positive nodes variable, posNode.
+posNode <- cut(data$PosNodesSurg, c(-0.1,0, 3, 28.1))
+summary(posNode)
+```
+Do we want to look at other groupings?
+
+###Histological Grade###  
+
+```{r histGrade,echo=FALSE}
+# Survival Analysis--Histological Grade
+library(survival)
+# detach()
+# Grade I & II
+dataI_II<-data[data$HistGradeSurg != "III",]
+dataI_II.surv <- survfit(Surv(dataI_II$RecurrTime_years)~ 1, conf.type="none")
+survI_II<-summary(dataI_II.surv)
+plot(survI_II$surv~survI_II$time, xlim=c(0,10),xlab="Time (years)", ylab="Survival Probability",main="Histological Grade Survival Functions",type="s",pch=3,lty=1)
+# Grade III
+dataIII<-data[data$HistGradeSurg == "III",]
+dataIII.surv <- survfit(Surv(dataIII$RecurrTime_years)~ 1, conf.type="none")
+survIII<-summary(dataIII.surv)
+lines(survIII$surv~survIII$time,type="s",pch=4,lty=4)
+legend(6, .9, c("I-II", "III"), lty=(c(1,4)))
+summary(data$HistGradeSurg)
+```
+Appears Grade III has a shorter time to recurrence than I-II.  
+  
+###ER Groups###
+
+```{r ERgroups,echo=FALSE}
+require(survival)
+# create a categorical positive nodes variable, posNode.
+# ER 0-10
+data.ER.0.10<-data[data$initial.ER >= 0 & data$initial.ER <= 10,]
+data.ER.0.10.surv <- survfit(Surv(data.ER.0.10$RecurrTime_years)~ 1, conf.type="none")
+surv.ER.0.10<-summary(data.ER.0.10.surv)
+plot(surv.ER.0.10$surv~surv.ER.0.10$time, xlim=c(0,10),xlab="Time (years)", ylab="Survival Probability",main="ER Class Survival Functions",type="s",lty=1)
+# ER 11-79
+data.ER.11.70<-data[data$initial.ER > 10 & data$initial.ER < 80,]
+data.ER.11.70.surv <- survfit(Surv(data.ER.11.70$RecurrTime_years)~ 1, conf.type="none")
+surv.ER.11.70<-summary(data.ER.11.70.surv)
+lines(data.ER.11.70.surv$surv~data.ER.11.70.surv$time,type="s",pch=3,lty=3)
+# ER 80-100
+library(survival)
+data.ER.80.100<-data[data$initial.ER >= 80,]
+data.ER.80.100.surv <- survfit(Surv(data.ER.80.100$RecurrTime_years)~ 1, conf.type="none")
+surv.ER.80.100<-summary(data.ER.80.100.surv)
+lines(surv.ER.80.100$surv~surv.ER.80.100$time,type="s",lty=4)
+legend(6, .9, c("0-10", "11-79", "80-100"), lty=(c(1,3,4)))
+# create a categorical positive nodes variable, posNode.
+ERgroup <- cut(data$initial.ER, c(-0.1, 10, 79, 100.1))
+summary(ERgroup)
+```
+Alternate Grouping since 11-79 and 80-100 cross.  
+
+```{r ERgroup2,echo=FALSE}
+require(survival)
+# ER 0-10
+data.ER.0.10<-data[data$initial.ER >= 0 & data$initial.ER <= 10,]
+data.ER.0.10.surv <- survfit(Surv(data.ER.0.10$RecurrTime_years)~ 1, conf.type="none")
+surv.ER.0.10<-summary(data.ER.0.10.surv)
+plot(surv.ER.0.10$surv~surv.ER.0.10$time, xlim=c(0,10),xlab="Time (years)", ylab="Survival Probability",main="ER Class Survival Functions",type="s",lty=1)
+# ER 11-100
+data.ER.11.100<-data[data$initial.ER > 10,]
+data.ER.11.100.surv <- survfit(Surv(data.ER.11.100$RecurrTime_years)~ 1, conf.type="none")
+surv.ER.11.100<-summary(data.ER.11.100.surv)
+lines(surv.ER.11.100$surv~surv.ER.11.100$time,type="s",pch=3,lty=3)
+legend(6, .9, c("0-10", "11-100"), lty=(c(1,3)))
+# create a categorical positive nodes variable, posNode.
+ERgroup <- cut(data$initial.ER, c(-0.1, 10, 100.1))
+summary(ERgroup)
+```
+Appears that ER 0-10 has a shorter recurrence time than 11-100.  
+  
+  
+###PR Groups###
+```{r PRgroups,echo=FALSE}
+# Survival Analysis--PR categories
+require(survival)
+# PR 0
+data.PR.0<-data[data$initial.PR == 0,]
+# summary(data.PR.0)
+# detach()
+# attach(data.PR.0)
+data.PR.0.surv <- survfit(Surv(data.PR.0$RecurrTime_years)~ 1, conf.type="none")
+surv.PR.0<-summary(data.PR.0.surv)
+plot(surv.PR.0$surv~surv.PR.0$time, xlim=c(0,10),xlab="Time (years)", ylab="Survival Probability",main="PR Class Survival Functions",type="s",lty=1)
+# PR 1-100
+data.PR.1.100<-data[data$initial.PR > 0,]
+data.PR.1.100.surv <- survfit(Surv(data.PR.1.100$RecurrTime_years)~ 1, conf.type="none")
+surv.PR.1.100<-summary(data.PR.1.100.surv)
+lines(data.PR.1.100.surv$surv~data.PR.1.100.surv$time,type="s",lty=3)
+legend(6, .9, c("0", "1-100"), lty=(c(1,3)))
+PRgroup<-cut(data$initial.PR,c(-1,0,100.1))
+summary(PRgroup)
+
+```
+Appears that PR 0 has shorter recurrence time than 1-100.  
+  
+  
+###Data Summary for 0 Positive Nodes###
+
+```{r Summary0PosNode,echo=FALSE}
+data0<-data[data$PosNodesSurg == 0,]
+summary(data0)
+```
+
+###ER Survival Curves for 0 Positive Nodes###  
+
+<h4>ER Groups 0-10, 11-79, 80-100 with 0 Positive Nodes</h4>  
+```{r ER0Group1,echo=FALSE}
+require(survival)
+# ER 0-10
+data.ER.0.10<-data0[data0$initial.ER >= 0 & data0$initial.ER <= 10,]
+# summary(data.ER.0.10)
+# detach()
+# attach(data.ER.0.10)
+data.ER.0.10.surv <- survfit(Surv(data.ER.0.10$RecurrTime_years)~ 1, conf.type="none")
+surv.ER.0.10<-summary(data.ER.0.10.surv)
+plot(surv.ER.0.10$surv~surv.ER.0.10$time, xlim=c(0,10),xlab="Time (years)", ylab="Survival Probability",main="ER Class Survival Functions for 0 Positive Nodes",type="s",lty=1)
+# detach()
+# ER 11-79
+data.ER.11.79<-data0[data0$initial.ER > 10 & data0$initial.ER < 80,]
+# attach(data.ER.11.79)
+data.ER.11.79.surv <- survfit(Surv(data.ER.11.79$RecurrTime_years)~ 1, conf.type="none")
+surv.ER.11.79<-summary(data.ER.11.79.surv)
+lines(data.ER.11.79.surv$surv~data.ER.11.79.surv$time,type="s",pch=3,lty=3)
+#detach()
+# ER 80-100
+data.ER.80.100<-data0[data0$initial.ER >= 80,]
+#attach(data.ER.80.100)
+data.ER.80.100.surv <- survfit(Surv(data.ER.80.100$RecurrTime_years)~ 1, conf.type="none")
+surv.ER.80.100<-summary(data.ER.80.100.surv)
+lines(surv.ER.80.100$surv~surv.ER.80.100$time,type="s",pch=4,lty=4)
+#detach()
+legend(6, .9, c("0-10", "11-79", "80-100"), lty=(c(1,3,4)))
+ER0group1<-cut(data0$initial.ER, c(-1,10,79,100.1))
+summary(ER0group1)
+```
+With only 2 patients in the 11-79 group, I decided to look at some different groupings
+
+<h4>ER groups 0-10, 11-100</h4>
+```{r ER0group2,echo=FALSE}
+# ER 11-100
+data.ER.11.100<-data0[data0$initial.ER > 10,]
+#attach(data.ER.11.100)
+data.ER.11.100.surv <- survfit(Surv(data.ER.11.100$RecurrTime_years)~ 1, conf.type="none")
+surv.ER.11.100<-summary(data.ER.11.100.surv)
+plot(surv.ER.0.10$surv~surv.ER.0.10$time, xlim=c(0,10),xlab="Time (years)", ylab="Survival Probability",main="ER Class Survival Functions for 0 Positive Nodes",type="s",lty=1)
+lines(surv.ER.11.100$surv~surv.ER.11.100$time,type="s",pch=4,lty=4)
+#detach()
+legend(6, .9, c("0-10", "11-100"), lty=(c(1,4)))
+ER0group2<-cut(data0$initial.ER, c(-1,10,100.1))
+summary(ER0group2)
+
+```
+
+<h4>ER Groups 0, 1-79, 80-100</h4>
+```{r ER0group3,echo=FALSE}
+require(survival)
+# ER 0
+data.ER.0<-data0[data0$initial.ER == 0,]
+# summary(data.ER.0)
+# detach()
+# attach(data.ER.0)
+data.ER.0.surv <- survfit(Surv(data.ER.0$RecurrTime_years)~ 1, conf.type="none")
+surv.ER.0<-summary(data.ER.0.surv)
+plot(surv.ER.0$surv~surv.ER.0$time, xlim=c(0,10),xlab="Time (years)", ylab="Survival Probability",main="ER Class Survival Functions for 0 Positive Nodes",type="s",pch=1,lty=1)
+# detach()
+# ER 1-79
+data.ER.1.79<-data0[data0$initial.ER > 0 & data0$initial.ER < 80,]
+# attach(data.ER.1.79)
+data.ER.1.79.surv <- survfit(Surv(data.ER.1.79$RecurrTime_years)~ 1, conf.type="none")
+surv.ER.1.79<-summary(data.ER.1.79.surv)
+lines(data.ER.1.79.surv$surv~data.ER.1.79.surv$time,type="s",pch=3,lty=3)
+# detach()
+# ER 80-100
+data.ER.80.100<-data0[data0$initial.ER >= 80,]
+# attach(data.ER.80.100)
+data.ER.80.100.surv <- survfit(Surv(data.ER.80.100$RecurrTime_years)~ 1, conf.type="none")
+surv.ER.80.100<-summary(data.ER.80.100.surv)
+lines(surv.ER.80.100$surv~surv.ER.80.100$time,type="s",pch=4,lty=4)
+# detach()
+legend(6, .9, c("0", "1-79", "80-100"), lty=(c(1,3,4)))
+ER0group3<-cut(data0$initial.ER, c(-1,0,79,100.1))
+summary(ER0group3)
+
+```
+
+<h4>ER Groups 0, 1-100</h4>
+```{r ER0group4,echo=FALSE}
+require(survival)
+# ER 0
+plot(surv.ER.0$surv~surv.ER.0$time, xlim=c(0,10),xlab="Time (years)", ylab="Survival Probability",main="ER Class Survival Functions for 0 Positive Nodes",type="s",pch=1,lty=1)
+# ER 1-100
+data.ER.1.100<-data0[data0$initial.ER > 0,]
+# attach(data.ER.1.79)
+data.ER.1.100.surv <- survfit(Surv(data.ER.1.100$RecurrTime_years)~ 1, conf.type="none")
+surv.ER.1.100<-summary(data.ER.1.100.surv)
+lines(surv.ER.1.100$surv~surv.ER.1.100$time,type="s",pch=3,lty=3)
+legend(6, .9, c("0", "1-100"), lty=(c(1,3)))
+ER0group4<-cut(data0$initial.ER, c(-1,0,100.1))
+summary(ER0group4)
+
+```
+
+###PR for 0 Positive Nodes###
+```{r PR0,echo=FALSE}
+# 0 Positive Nodes, PR 
+# PR 0
+data.PR.0<-data0[data0$initial.PR == 0,]
+#summary(data.PR.0)
+# detach()
+# attach(data.PR.0)
+data.PR.0.surv <- survfit(Surv(data.PR.0$RecurrTime_years)~ 1, conf.type="none")
+surv.PR.0<-summary(data.PR.0.surv)
+plot(surv.PR.0$surv~surv.PR.0$time, xlim=c(0,10),xlab="Time (years)", ylab="Survival Probability",main="PR Class Survival Functions for 0 Positive Nodes",type="s",pch=1,lty=1)
+# detach()
+# PR 1-100
+data.PR.100<-data0[data0$initial.PR > 0,]
+# attach(data.PR.100)
+data.PR.1.100.surv <- survfit(Surv(data.PR.100$RecurrTime_years)~ 1, conf.type="none")
+surv.PR.100<-summary(data.PR.1.100.surv)
+lines(surv.PR.100$surv~surv.PR.100$time,type="s",pch=3,lty=3)
+# detach()
+legend(6, .9, c("0", "1-100"), lty=(c(1,3)))
+PR.0<-cut(data0$initial.PR,c(-1,0,100))
+summary(PR.0)
+```
